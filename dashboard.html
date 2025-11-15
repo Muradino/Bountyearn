@@ -2,78 +2,139 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bounty Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BountyEarn — Solana Web3 Bounties</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- CSP to allow Phantom wallet -->
+  <meta http-equiv="Content-Security-Policy"
+    content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com;">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.js"></script>
 
   <style>
-    .fade {
-      animation: fadeIn .8s forwards;
-      opacity: 0;
+    body {
+      background: linear-gradient(135deg, #0B0E11, #11151C);
+      color: white;
+      font-family: 'Inter', sans-serif;
     }
 
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: rgba(15, 19, 26, 0.85);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #14f195, #0fdf80);
+      color: black;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 10px rgba(20, 241, 149, 0.5);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(20, 241, 149, 0.7);
+    }
+
+    .btn-outline {
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: 2px solid #14f195;
+      color: #14f195;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-outline:hover {
+      background: #14f195;
+      color: black;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 80px auto 40px auto;
+      padding: 0 20px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #14f195, #0fdf80);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.lead {
+      color: #b0b3b8;
+      font-size: 1.2rem;
+      margin-bottom: 40px;
+    }
+
+    .wallet-info {
+      margin-left: 20px;
+      font-weight: 500;
+      color: #14f195;
     }
   </style>
 </head>
 
-<body class="bg-[#0B0E11] text-white font-sans">
+<body>
 
   <!-- NAVBAR -->
-  <nav class="w-full px-6 py-4 flex justify-between items-center bg-[#0F131A]/70 backdrop-blur-xl fixed top-0 z-50 shadow-xl">
-    <h1 class="text-2xl font-bold tracking-wide text-green-400">FlashBlock</h1>
-
-    <button id="connectWalletBtn"
-      class="px-5 py-2 rounded-xl bg-green-500 hover:bg-green-600 transition font-semibold shadow-lg">
-      Connect Wallet
-    </button>
+  <nav>
+    <div class="text-2xl font-bold text-green-400 tracking-wide">BountyEarn</div>
+    <div class="flex items-center">
+      <button id="connectWalletBtn" class="btn-primary">Connect Wallet</button>
+      <span id="walletAddress" class="wallet-info"></span>
+    </div>
   </nav>
 
-  <section class="pt-28 px-6 fade max-w-5xl mx-auto">
-    <h2 class="text-3xl font-bold mb-3">Available Bounties</h2>
-    <p class="text-gray-400 mb-8">Submit your work and earn instantly.</p>
+  <!-- MAIN CONTENT -->
+  <section class="container text-center">
+    <h1>Welcome to BountyEarn</h1>
+    <p class="lead">Create, submit, and approve Solana bounties with automatic payouts. All powered by Web3.</p>
 
-    <div id="bountyList" class="grid md:grid-cols-2 gap-6">
-      <!-- Populated by app.js -->
-    </div>
-
-    <div class="mt-10 text-center">
-      <a href="create.html"
-        class="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 transition font-semibold text-lg shadow-lg">
-        + Create New Bounty
-      </a>
+    <div class="flex flex-col sm:flex-row justify-center items-center gap-6">
+      <a href="create.html" class="btn-primary">Create Bounty</a>
+      <a href="dashboard.html" class="btn-outline">View Dashboard</a>
     </div>
   </section>
 
-  <footer class="py-8 text-center text-gray-400 text-sm mt-20">
-    FlashBlock — Solana Web3 Bounty Protocol
-  </footer>
-
-  <!-- JS -->
-  <script type="module">
-    import { connectWallet } from "./solana.js";
-    import { loadBounties } from "./app.js";
-
-    // Connect Wallet Button Fix
+  <!-- SCRIPTS -->
+  <script src="./solana.js"></script>
+  <script src="./app.js"></script>
+  <script>
+    // Connect Wallet button
     document.getElementById("connectWalletBtn").addEventListener("click", async () => {
-      const wallet = await connectWallet();
+      if (!window.solana) {
+        alert("Phantom wallet not found! Please install Phantom.");
+        return;
+      }
 
-      if (wallet?.publicKey) {
-        const pk = wallet.publicKey.toBase58();
-        const btn = document.getElementById("connectWalletBtn");
-
-        btn.textContent = pk.slice(0, 6) + "..." + pk.slice(-4);
-        localStorage.setItem("wallet", pk);
+      try {
+        const resp = await window.solana.connect();
+        const walletAddress = resp.publicKey.toBase58();
+        document.getElementById("walletAddress").textContent = walletAddress;
+        document.getElementById("connectWalletBtn").textContent =
+          walletAddress.slice(0, 6) + "..." + walletAddress.slice(-4);
+        localStorage.setItem("wallet", walletAddress);
+      } catch (err) {
+        console.error("Wallet connection failed", err);
       }
     });
-
-    // Load bounties automatically
-    loadBounties();
   </script>
 
 </body>
