@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BountyEarn — Solana Web3 Bounties</title>
+  <title>BountyEarn Dashboard</title>
 
-  <!-- CSP to allow Phantom wallet -->
+  <!-- CSP for Phantom Wallet -->
   <meta http-equiv="Content-Security-Policy"
     content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com;">
 
@@ -37,7 +37,7 @@
       background: linear-gradient(90deg, #14f195, #0fdf80);
       color: black;
       font-weight: 600;
-      padding: 12px 24px;
+      padding: 10px 20px;
       border-radius: 12px;
       transition: transform 0.2s, box-shadow 0.2s;
       box-shadow: 0 4px 10px rgba(20, 241, 149, 0.5);
@@ -48,45 +48,31 @@
       box-shadow: 0 6px 15px rgba(20, 241, 149, 0.7);
     }
 
-    .btn-outline {
-      padding: 12px 24px;
-      border-radius: 12px;
-      border: 2px solid #14f195;
-      color: #14f195;
+    .tabs button {
+      padding: 10px 20px;
+      border-radius: 8px;
       font-weight: 500;
-      transition: background 0.2s, color 0.2s;
+      margin-right: 10px;
+      transition: all 0.2s;
     }
 
-    .btn-outline:hover {
+    .tabs button.active {
       background: #14f195;
       color: black;
     }
 
-    .container {
-      max-width: 900px;
-      margin: 80px auto 40px auto;
-      padding: 0 20px;
-    }
-
-    h1 {
-      font-size: 3rem;
-      font-weight: 700;
+    .card {
+      background: #0f172a;
+      padding: 20px;
+      border-radius: 12px;
       margin-bottom: 20px;
-      background: linear-gradient(90deg, #14f195, #0fdf80);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      border: 1px solid #1e293b;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    p.lead {
-      color: #b0b3b8;
-      font-size: 1.2rem;
-      margin-bottom: 40px;
-    }
-
-    .wallet-info {
-      margin-left: 20px;
-      font-weight: 500;
-      color: #14f195;
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(20, 241, 149, 0.3);
     }
   </style>
 </head>
@@ -95,29 +81,33 @@
 
   <!-- NAVBAR -->
   <nav>
-    <div class="text-2xl font-bold text-green-400 tracking-wide">BountyEarn</div>
+    <div class="text-2xl font-bold text-green-400">BountyEarn</div>
     <div class="flex items-center">
       <button id="connectWalletBtn" class="btn-primary">Connect Wallet</button>
-      <span id="walletAddress" class="wallet-info"></span>
+      <span id="walletAddress" class="ml-4 font-semibold text-green-400"></span>
     </div>
   </nav>
 
-  <!-- MAIN CONTENT -->
-  <section class="container text-center">
-    <h1>Welcome to BountyEarn</h1>
-    <p class="lead">Create, submit, and approve Solana bounties with automatic payouts. All powered by Web3.</p>
+  <!-- DASHBOARD CONTENT -->
+  <div class="container mx-auto px-6 py-12">
+    <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
 
-    <div class="flex flex-col sm:flex-row justify-center items-center gap-6">
-      <a href="create.html" class="btn-primary">Create Bounty</a>
-      <a href="dashboard.html" class="btn-outline">View Dashboard</a>
+    <!-- TABS -->
+    <div class="tabs mb-6">
+      <button id="tabMyBounties" class="active">My Bounties</button>
+      <button id="tabOpenBounties">Open Bounties</button>
+      <button id="tabMySubmissions">My Submissions</button>
     </div>
-  </section>
+
+    <!-- BOUNTY LIST -->
+    <div id="bountyList"></div>
+  </div>
 
   <!-- SCRIPTS -->
   <script src="./solana.js"></script>
   <script src="./app.js"></script>
   <script>
-    // Connect Wallet button
+    // --- WALLET CONNECT ---
     document.getElementById("connectWalletBtn").addEventListener("click", async () => {
       if (!window.solana) {
         alert("Phantom wallet not found! Please install Phantom.");
@@ -131,12 +121,93 @@
         document.getElementById("connectWalletBtn").textContent =
           walletAddress.slice(0, 6) + "..." + walletAddress.slice(-4);
         localStorage.setItem("wallet", walletAddress);
+        loadBounties(); // Load bounties after wallet connect
       } catch (err) {
         console.error("Wallet connection failed", err);
+      }
+    });
+
+    // --- TABS LOGIC ---
+    const tabs = ["tabMyBounties", "tabOpenBounties", "tabMySubmissions"];
+    let currentTab = "tabMyBounties";
+
+    tabs.forEach(tabId => {
+      document.getElementById(tabId).addEventListener("click", () => {
+        currentTab = tabId;
+        tabs.forEach(t => document.getElementById(t).classList.remove("active"));
+        document.getElementById(tabId).classList.add("active");
+        loadBounties();
+      });
+    });
+
+    // --- LOAD BOUNTIES FUNCTION ---
+    function loadBounties() {
+      const bountyList = document.getElementById("bountyList");
+      bountyList.innerHTML = "";
+
+      const wallet = localStorage.getItem("wallet");
+      if (!wallet) {
+        bountyList.innerHTML = "<p class='text-gray-400'>Please connect your wallet to see bounties.</p>";
+        return;
+      }
+
+      // Sample data (replace later with localStorage or on-chain)
+      const bounties = JSON.parse(localStorage.getItem("bounties") || "[]");
+
+      let filtered = [];
+      switch (currentTab) {
+        case "tabMyBounties":
+          filtered = bounties.filter(b => b.creator === wallet);
+          break;
+        case "tabOpenBounties":
+          filtered = bounties.filter(b => b.status === "open");
+          break;
+        case "tabMySubmissions":
+          filtered = bounties.filter(b => (b.submissions || []).some(s => s.submitter === wallet));
+          break;
+      }
+
+      if (filtered.length === 0) {
+        bountyList.innerHTML = "<p class='text-gray-400'>No bounties found.</p>";
+        return;
+      }
+
+      filtered.forEach(b => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <h2 class="text-xl font-bold mb-2">${b.title}</h2>
+          <p class="text-gray-300 mb-2">${b.description}</p>
+          <p class="text-green-400 font-semibold mb-2">Reward: ${b.reward} SOL</p>
+          <p class="text-gray-400 mb-4">Deadline: ${b.deadline}</p>
+          <div class="flex space-x-2">
+            <a href="bounty.html?id=${b.id}" class="btn-primary text-sm">View</a>
+            ${currentTab === "tabMyBounties" && b.status === "open" ? `<button class="btn-outline text-sm approveBtn">Approve Winner</button>` : ""}
+          </div>
+        `;
+        bountyList.appendChild(card);
+      });
+
+      // Approve winner button logic
+      document.querySelectorAll(".approveBtn").forEach((btn, index) => {
+        btn.addEventListener("click", () => {
+          alert(`Winner approved for: ${filtered[index].title}`);
+          // TODO: Add Solana transfer logic
+        });
+      });
+    }
+
+    // Load bounties automatically if wallet is already connected
+    window.addEventListener("load", () => {
+      const wallet = localStorage.getItem("wallet");
+      if (wallet) {
+        document.getElementById("walletAddress").textContent = wallet;
+        document.getElementById("connectWalletBtn").textContent =
+          wallet.slice(0, 6) + "..." + wallet.slice(-4);
+        loadBounties();
       }
     });
   </script>
 
 </body>
-
 </html>
