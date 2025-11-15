@@ -1,1 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Bounty - BountyEarn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+
+  <h1 class="text-3xl font-bold text-green-600 mb-6">Create a New Bounty</h1>
+
+  <!-- Wallet info -->
+  <div id="walletInfo" class="mb-6 text-gray-800">
+    <p>Wallet: <span id="walletAddress"></span></p>
+    <p>SOL Balance: <span id="solBalance"></span></p>
+    <button id="connectWalletBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg mt-2 hover:bg-green-700 transition">
+      Connect Wallet
+    </button>
+  </div>
+
+  <!-- Bounty form -->
+  <form id="bountyForm" class="bg-white p-6 rounded-lg shadow w-full max-w-md flex flex-col space-y-4">
+    <input type="text" id="title" placeholder="Bounty Title" required class="border rounded px-3 py-2">
+    <textarea id="description" placeholder="Bounty Description" required class="border rounded px-3 py-2"></textarea>
+    <input type="number" id="reward" placeholder="Reward (SOL)" min="0.01" step="0.01" required class="border rounded px-3 py-2">
+    <input type="datetime-local" id="deadline" required class="border rounded px-3 py-2">
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+      Create Bounty
+    </button>
+  </form>
+
+  <!-- Scripts -->
+  <script type="module" src="solana.js"></script>
+  <script type="module" src="app.js"></script>
+  <script>
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const walletAddressSpan = document.getElementById('walletAddress');
+    const solBalanceSpan = document.getElementById('solBalance');
+
+    connectWalletBtn.addEventListener('click', async () => {
+      const wallet = await connectWallet();
+      walletAddressSpan.textContent = wallet.publicKey.toBase58();
+      const balance = await getBalance(wallet);
+      solBalanceSpan.textContent = balance + ' SOL';
+    });
+
+    const bountyForm = document.getElementById('bountyForm');
+    bountyForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const wallet = await connectWallet();
+      const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
+      const reward = parseFloat(document.getElementById('reward').value);
+      const deadline = document.getElementById('deadline').value;
+
+      createBounty(title, description, reward, deadline, wallet.publicKey.toBase58());
+
+      alert('Bounty created successfully!');
+      window.location.href = 'dashboard.html';
+    });
+  </script>
+</body>
+</html>
 
