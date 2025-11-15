@@ -1,48 +1,95 @@
 // solana.js
-import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from 'https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.esm.min.js';
+import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 
-// Connect to Solana Devnet
-const connection = new Connection('https://api.devnet.solana.com');
+// Connect to Solana devnet
+const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
-let userWallet = null;
+// ---------------------------
+// Wallet management
+// ---------------------------
 
-// Connect Wallet function
+let wallet = null; // current wallet object
+
 export async function connectWallet() {
-  // Check if wallet exists in localStorage
-  const stored = localStorage.getItem('wallet');
-  if (stored) {
-    const secret = Uint8Array.from(JSON.parse(stored));
-    userWallet = Keypair.fromSecretKey(secret);
-  } else {
-    // Generate new wallet
-    userWallet = Keypair.generate();
-    localStorage.setItem('wallet', JSON.stringify(Array.from(userWallet.secretKey)));
+  // If wallet already connected
+  if (wallet) return wallet;
+
+  // Try Phantom Wallet
+  if (window.solana && window.solana.isPhantom) {
+    try {
+      const resp = await window.solana.connect();
+      wallet = window.solana;
+      localStorage.setItem("wallet", resp.publicKey.toString());
+      return wallet;
+    } catch (err) {
+      console.error("Phantom connection failed:", err);
+    }
   }
-  return userWallet;
+
+  // Fallback dev wallet
+  if (!wallet) {
+    wallet = {
+      publicKey: {
+        toBase58: () => "DevWallet123456789"
+      },
+      signTransaction: async (tx) => {
+        console.warn("Dev wallet signing transaction (simulation).");
+        return tx;
+      },
+      signAllTransactions: async (txs) => {
+        console.warn("Dev wallet signing multiple transactions (simulation).");
+        return txs;
+      }
+    };
+    localStorage.setItem("wallet", wallet.publicKey.toBase58());
+    console.warn("Using fallback dev wallet. Phantom not installed.");
+  }
+
+  return wallet;
 }
 
-// Get SOL balance
+// ---------------------------
+// Get wallet SOL balance
+// ---------------------------
 export async function getBalance(wallet) {
-  if (!wallet) return 0;
-  const balance = await connection.getBalance(wallet.publicKey);
-  return (balance / LAMPORTS_PER_SOL).toFixed(4); // convert lamports to SOL
+  if (wallet && wallet.publicKey.toBase58() === "DevWallet123456789") {
+    return 10; // fake 10 SOL for dev wallet
+  }
+
+  try {
+    const publicKey = new PublicKey(wallet.publicKey.toString());
+    const balance = await connection.getBalance(publicKey);
+    return balance / 1e9; // convert lamports to SOL
+  } catch (err) {
+    console.error("Failed to get balance:", err);
+    return 0;
+  }
 }
 
-// Send SOL from wallet to another (for future bounty payouts)
-export async function sendSol(toPublicKeyStr, amount) {
-  if (!userWallet) throw new Error('Wallet not connected');
+// ---------------------------
+// Send SOL (simulation for now)
+// ---------------------------
+export async function sendSol(fromWallet, toPublicKeyStr, amount) {
+  if (fromWallet.publicKey.toBase58() === "DevWallet123456789") {
+    console.log(`Simulated sending ${amount} SOL to ${toPublicKeyStr}`);
+    return true;
+  }
 
-  const toPublicKey = new PublicKey(toPublicKeyStr);
-  const transaction = await connection.requestAirdrop(userWallet.publicKey, 1 * LAMPORTS_PER_SOL); // For devnet: top-up if empty
+  try {
+    const toPubKey = new PublicKey(toPublicKeyStr);
+    const transaction = new window.solana.Transaction().add(
+      window.solana.SystemProgram.transfer({
+        fromPubkey: fromWallet.publicKey,
+        toPubkey: toPubKey,
+        lamports: amount * 1e9,
+      })
+    );
 
-  // Note: Real transfer logic goes here (requires signed transaction)
-  console.log(`Simulated sending ${amount} SOL to ${toPublicKey.toBase58()}`);
-  return true;
+    const signature = await fromWallet.signAndSendTransaction(transaction);
+    console.log("Transaction signature:", signature);
+    return signature;
+  } catch (err) {
+    console.error("Transaction failed:", err);
+    return false;
+  }
 }
-
-// Get public key string
-export function getPublicKey() {
-  if (!userWallet) return null;
-  return userWallet.publicKey.toBase58();
-}
-
