@@ -1,66 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create Bounty - BountyEarn</title>
+  <title>Create Bounty — FlashBlock</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .fade {
+      animation: fadeIn .7s forwards;
+      opacity: 0;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
 
-  <h1 class="text-3xl font-bold text-green-600 mb-6">Create a New Bounty</h1>
+<body class="bg-[#0B0E11] text-white font-sans">
 
-  <!-- Wallet info -->
-  <div id="walletInfo" class="mb-6 text-gray-800">
-    <p>Wallet: <span id="walletAddress"></span></p>
-    <p>SOL Balance: <span id="solBalance"></span></p>
-    <button id="connectWalletBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg mt-2 hover:bg-green-700 transition">
+  <!-- NAVBAR -->
+  <nav class="w-full px-6 py-4 flex justify-between items-center bg-[#0F131A]/70 backdrop-blur-xl fixed top-0 z-50 shadow-xl">
+    <a href="index.html" class="text-2xl font-bold tracking-wide text-green-400">FlashBlock</a>
+
+    <button id="connectWalletBtn"
+      class="px-5 py-2 rounded-xl bg-green-500 hover:bg-green-600 transition font-semibold shadow-lg">
       Connect Wallet
     </button>
-  </div>
+  </nav>
 
-  <!-- Bounty form -->
-  <form id="bountyForm" class="bg-white p-6 rounded-lg shadow w-full max-w-md flex flex-col space-y-4">
-    <input type="text" id="title" placeholder="Bounty Title" required class="border rounded px-3 py-2">
-    <textarea id="description" placeholder="Bounty Description" required class="border rounded px-3 py-2"></textarea>
-    <input type="number" id="reward" placeholder="Reward (SOL)" min="0.01" step="0.01" required class="border rounded px-3 py-2">
-    <input type="datetime-local" id="deadline" required class="border rounded px-3 py-2">
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-      Create Bounty
-    </button>
-  </form>
+  <!-- CONTENT -->
+  <section class="pt-28 px-6 fade max-w-xl mx-auto">
 
-  <!-- Scripts -->
-  <script type="module" src="solana.js"></script>
-  <script type="module" src="app.js"></script>
-  <script>
-    const connectWalletBtn = document.getElementById('connectWalletBtn');
-    const walletAddressSpan = document.getElementById('walletAddress');
-    const solBalanceSpan = document.getElementById('solBalance');
+    <h2 class="text-3xl font-bold mb-3">Create a New Bounty</h2>
+    <p class="text-gray-400 mb-8">
+      Fund the prize, set the rules — and FlashBlock enforces payouts automatically.
+    </p>
 
-    connectWalletBtn.addEventListener('click', async () => {
+    <form id="createForm" class="space-y-6 bg-[#11151C] p-6 rounded-2xl shadow-xl">
+
+      <div>
+        <label class="block text-sm mb-2">Bounty Title</label>
+        <input type="text" id="title" required
+          class="w-full px-4 py-3 bg-[#0B0E11] border border-gray-700 rounded-xl focus:ring-2 focus:ring-green-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-2">Description</label>
+        <textarea id="description" rows="4" required
+          class="w-full px-4 py-3 bg-[#0B0E11] border border-gray-700 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-2">Reward (in SOL)</label>
+        <input type="number" id="reward" min="0.01" step="0.01" required
+          class="w-full px-4 py-3 bg-[#0B0E11] border border-gray-700 rounded-xl focus:ring-2 focus:ring-green-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm mb-2">Deadline</label>
+        <input type="date" id="deadline" required
+          class="w-full px-4 py-3 bg-[#0B0E11] border border-gray-700 rounded-xl focus:ring-2 focus:ring-green-500 outline-none">
+      </div>
+
+      <button type="submit"
+        class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 rounded-xl text-lg font-semibold transition shadow-lg">
+        Create Bounty
+      </button>
+
+    </form>
+  </section>
+
+  <footer class="py-8 text-center text-gray-400 text-sm mt-20">
+    FlashBlock — Solana Web3 Bounty Protocol
+  </footer>
+
+  <!-- JS -->
+  <script type="module">
+    import { connectWallet } from "./solana.js";
+    import { createBounty } from "./app.js";
+
+    // Connect Wallet button (FULL FIX)
+    document.getElementById("connectWalletBtn").addEventListener("click", async () => {
       const wallet = await connectWallet();
-      walletAddressSpan.textContent = wallet.publicKey.toBase58();
-      const balance = await getBalance(wallet);
-      solBalanceSpan.textContent = balance + ' SOL';
+      if (wallet?.publicKey) {
+        const pk = wallet.publicKey.toBase58();
+        document.getElementById("connectWalletBtn").textContent =
+          pk.slice(0, 6) + "..." + pk.slice(-4);
+        localStorage.setItem("wallet", pk);
+      }
     });
 
-    const bountyForm = document.getElementById('bountyForm');
-    bountyForm.addEventListener('submit', async (e) => {
+    // Create Bounty (calls app.js)
+    document.getElementById("createForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const wallet = await connectWallet();
-      const title = document.getElementById('title').value;
-      const description = document.getElementById('description').value;
-      const reward = parseFloat(document.getElementById('reward').value);
-      const deadline = document.getElementById('deadline').value;
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+      const reward = document.getElementById("reward").value.trim();
+      const deadline = document.getElementById("deadline").value;
 
-      createBounty(title, description, reward, deadline, wallet.publicKey.toBase58());
+      await createBounty(title, description, reward, deadline);
 
-      alert('Bounty created successfully!');
-      window.location.href = 'dashboard.html';
+      // redirect after success
+      window.location.href = "dashboard.html";
     });
   </script>
-</body>
-</html>
 
+</body>
+
+</html>
