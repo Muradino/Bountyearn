@@ -1,1 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BountyEarn Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+  <!-- Header -->
+  <h1 class="text-3xl font-bold text-green-600 mb-4">Bounty Dashboard</h1>
+
+  <!-- Wallet info -->
+  <div id="walletInfo" class="mb-6 text-gray-800">
+    <p>Wallet: <span id="walletAddress"></span></p>
+    <p>SOL Balance: <span id="solBalance"></span></p>
+    <button id="connectWalletBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg mt-2 hover:bg-green-700 transition">
+      Connect Wallet
+    </button>
+  </div>
+
+  <!-- Bounties list -->
+  <div id="bountyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Bounty cards will be injected here -->
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="solana.js"></script>
+  <script type="module" src="app.js"></script>
+  <script>
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const walletAddressSpan = document.getElementById('walletAddress');
+    const solBalanceSpan = document.getElementById('solBalance');
+    const walletInfoDiv = document.getElementById('walletInfo');
+
+    // Connect wallet
+    connectWalletBtn.addEventListener('click', async () => {
+      const wallet = await connectWallet();
+      walletAddressSpan.textContent = wallet.publicKey.toBase58();
+      const balance = await getBalance(wallet);
+      solBalanceSpan.textContent = balance + ' SOL';
+    });
+
+    // Render bounties
+    function renderBounties() {
+      const bountyList = document.getElementById('bountyList');
+      const bounties = getBounties(); // from app.js
+      bountyList.innerHTML = '';
+
+      bounties.forEach(b => {
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-lg shadow p-4 flex flex-col justify-between";
+
+        card.innerHTML = `
+          <h2 class="text-xl font-semibold mb-2">${b.title}</h2>
+          <p class="text-gray-700 mb-2">${b.description}</p>
+          <p class="font-bold text-green-600 mb-2">Reward: ${b.reward} SOL</p>
+          <p class="text-sm text-gray-500 mb-4">Deadline: ${new Date(b.deadline).toLocaleString()}</p>
+          <div class="flex space-x-2">
+            <a href="bounty.html?id=${b.id}" class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition">View Bounty</a>
+            <a href="submit.html?id=${b.id}" class="bg-yellow-500 text-white px-3 py-2 rounded hover:bg-yellow-600 transition">Submit Work</a>
+          </div>
+        `;
+
+        bountyList.appendChild(card);
+      });
+    }
+
+    // Initial render
+    renderBounties();
+  </script>
+</body>
+</html>
 
