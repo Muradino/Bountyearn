@@ -1,1 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bounty Details - BountyEarn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+  <!-- Header -->
+  <h1 class="text-3xl font-bold text-green-600 mb-6">Bounty Details</h1>
+
+  <!-- Wallet info -->
+  <div id="walletInfo" class="mb-6 text-gray-800">
+    <p>Wallet: <span id="walletAddress"></span></p>
+    <p>SOL Balance: <span id="solBalance"></span></p>
+    <button id="connectWalletBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg mt-2 hover:bg-green-700 transition">
+      Connect Wallet
+    </button>
+  </div>
+
+  <!-- Bounty details -->
+  <div id="bountyDetails" class="bg-white p-6 rounded-lg shadow mb-6 max-w-lg">
+    <h2 class="text-2xl font-semibold mb-2" id="bountyTitle"></h2>
+    <p class="text-gray-700 mb-2" id="bountyDescription"></p>
+    <p class="font-bold text-green-600 mb-2">Reward: <span id="bountyReward"></span> SOL</p>
+    <p class="text-sm text-gray-500 mb-2">Deadline: <span id="bountyDeadline"></span></p>
+    <p class="text-sm text-red-500 mb-2" id="bountyStatus"></p>
+  </div>
+
+  <!-- Submissions list -->
+  <div id="submissionsList" class="grid grid-cols-1 gap-4 mb-6">
+    <!-- Submission cards will be injected here -->
+  </div>
+
+  <!-- Submit work button (only for non-creator) -->
+  <div id="submitWorkDiv" class="mb-6">
+    <a id="submitWorkBtn" href="" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition">
+      Submit Work
+    </a>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="solana.js"></script>
+  <script type="module" src="app.js"></script>
+  <script>
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const walletAddressSpan = document.getElementById('walletAddress');
+    const solBalanceSpan = document.getElementById('solBalance');
+
+    let wallet = null;
+    connectWalletBtn.addEventListener('click', async () => {
+      wallet = await connectWallet();
+      walletAddressSpan.textContent = wallet.publicKey.toBase58();
+      const balance = await getBalance(wallet);
+      solBalanceSpan.textContent = balance + ' SOL';
+      loadBounty();
+    });
+
+    // Parse bounty ID from URL query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const bountyId = urlParams.get('id');
+
+    function loadBounty() {
+      const bounties = getBounties();
+      const submissions = getSubmissions();
+      const bounty = bounties.find(b => b.id === bountyId);
+      if (!bounty) return alert('Bounty not found');
+
+      document.getElementById('bountyTitle').textContent = bounty.title;
+      document.getElementById('bountyDescription').textContent = bounty.description;
+      document.getElementById('bountyReward').textContent = bounty.reward;
+      document.getElementById('bountyDeadline').textContent = new Date(bounty.deadline).toLocaleString();
+      document.getElementById('bountyStatus').textContent = `Status: ${bounty.status}`;
+
+      const submissionsList = document.getElementById('submissionsList');
+      submissionsList.innerHTML = '';
+
+      const bountySubs = submissions.filter(s => s.bountyId === bountyId);
+      bountySubs.forEach(s => {
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-lg shadow p-4 flex justify-between items-center";
+        card.innerHTML = `
+          <div>
+            <p class="font-semibold">${s.submitter}</p>
+            <p class="text-gray-600">${s.comment}</p>
+            <a href="${s.link}" target="_blank" class="text-blue-600 hover:underline">View submission</a>
+          </div>
+        `;
+        // If current wallet is creator and bounty is open, add approve button
+        if (wallet && wallet.publicKey.toBase58() === bounty.creator && bounty.status === 'open') {
+          const approveBtn = document.createElement('button');
+          approveBtn.textContent = 'Approve Winner';
+          approveBtn.className = 'bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700';
+          approveBtn.addEventListener('click', () => {
+            approveWinner(bountyId, s.submissionId);
+            alert('Winner approved!');
+            loadBounty();
+          });
+          card.appendChild(approveBtn);
+        }
+        submissionsList.appendChild(card);
+      });
+
+      // Show submit work button only if not creator
+      const submitDiv = document.getElementById('submitWorkDiv');
+      const submitBtn = document.getElementById('submitWorkBtn');
+      if (wallet && wallet.publicKey.toBase58() !== bounty.creator && bounty.status === 'open') {
+        submitBtn.href = `submit.html?id=${bountyId}`;
+        submitDiv.style.display = 'block';
+      } else {
+        submitDiv.style.display = 'none';
+      }
+    }
+
+    // If wallet already connected in localStorage, auto-load
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (localStorage.getItem('wallet')) {
+        wallet = await connectWallet();
+        walletAddressSpan.textContent = wallet.publicKey.toBase58();
+        const balance = await getBalance(wallet);
+        solBalanceSpan.textContent = balance + ' SOL';
+        loadBounty();
+      }
+    });
+  </script>
+</body>
+</html>
 
