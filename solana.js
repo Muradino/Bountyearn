@@ -1,25 +1,34 @@
 // solana.js
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+// Fully compatible with GitHub Pages
+// Phantom wallet + dev wallet fallback
+// Uses Solana devnet
 
-// Connect to Solana devnet
+// ---------------------------
+// Solana Web3.js via CDN
+// ---------------------------
+const { Connection, PublicKey, clusterApiUrl, SystemProgram, Transaction } = window;
+
+// ---------------------------
+// Connection to devnet
+// ---------------------------
 const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
 // ---------------------------
 // Wallet management
 // ---------------------------
-
-let wallet = null; // current wallet object
+let wallet = null;
 
 export async function connectWallet() {
-  // If wallet already connected
+  // If already connected
   if (wallet) return wallet;
 
-  // Try Phantom Wallet
+  // Check for Phantom
   if (window.solana && window.solana.isPhantom) {
     try {
       const resp = await window.solana.connect();
       wallet = window.solana;
       localStorage.setItem("wallet", resp.publicKey.toString());
+      console.log("Phantom wallet connected:", resp.publicKey.toString());
       return wallet;
     } catch (err) {
       console.error("Phantom connection failed:", err);
@@ -52,14 +61,16 @@ export async function connectWallet() {
 // Get wallet SOL balance
 // ---------------------------
 export async function getBalance(wallet) {
-  if (wallet && wallet.publicKey.toBase58() === "DevWallet123456789") {
-    return 10; // fake 10 SOL for dev wallet
+  if (!wallet) return 0;
+
+  if (wallet.publicKey.toBase58() === "DevWallet123456789") {
+    return 10; // fake 10 SOL
   }
 
   try {
     const publicKey = new PublicKey(wallet.publicKey.toString());
     const balance = await connection.getBalance(publicKey);
-    return balance / 1e9; // convert lamports to SOL
+    return balance / 1e9; // lamports → SOL
   } catch (err) {
     console.error("Failed to get balance:", err);
     return 0;
@@ -67,25 +78,27 @@ export async function getBalance(wallet) {
 }
 
 // ---------------------------
-// Send SOL (simulation for now)
+// Send SOL (real or simulated)
 // ---------------------------
-export async function sendSol(fromWallet, toPublicKeyStr, amount) {
+export async function sendSol(fromWallet, toPubKeyStr, amount) {
+  if (!fromWallet) return false;
+
   if (fromWallet.publicKey.toBase58() === "DevWallet123456789") {
-    console.log(`Simulated sending ${amount} SOL to ${toPublicKeyStr}`);
+    console.log(`Simulated sending ${amount} SOL to ${toPubKeyStr}`);
     return true;
   }
 
   try {
-    const toPubKey = new PublicKey(toPublicKeyStr);
-    const transaction = new window.solana.Transaction().add(
-      window.solana.SystemProgram.transfer({
+    const toPubKey = new PublicKey(toPubKeyStr);
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
         fromPubkey: fromWallet.publicKey,
         toPubkey: toPubKey,
         lamports: amount * 1e9,
       })
     );
 
-    const signature = await fromWallet.signAndSendTransaction(transaction);
+    const { signature } = await fromWallet.signAndSendTransaction(transaction);
     console.log("Transaction signature:", signature);
     return signature;
   } catch (err) {
